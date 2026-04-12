@@ -138,13 +138,13 @@ try:
 
     with d1:
         if data_bloques:
-            st.download_button("⬇️ Descargar Diagrama de Bloques (PDF)", data=data_bloques, file_name="Diagrama_de_bloques.pdf", mime="application/pdf")
+            st.download_button("⬇️ Descargar Diagrama de Bloques (PDF)", data=data_bloques, file_name="Diagrama_de_bloques.pdf", mime="3eth_sys/pdf")
         else:
             st.warning("⚠️ Sube 'Diagrama_de_bloques.pdf' a GitHub")
 
     with d2:
         if data_pfd:
-            st.download_button("⬇️ Descargar Diagrama de Flujo (PDF)", data=data_pfd, file_name="DFP.pdf", mime="application/pdf")
+            st.download_button("⬇️ Descargar Diagrama de Flujo (PDF)", data=data_pfd, file_name="DFP.pdf", mime="3eth_sys/pdf")
         else:
             st.warning("⚠️ Sube 'DFP.pdf' a GitHub")
 
