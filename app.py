@@ -144,7 +144,7 @@ try:
 
     with d2:
         if data_pfd:
-            st.download_button("⬇️ Descargar Diagrama de Flujo (PDF)", data=data_pfd, file_name="DPF.pdf", mime="application/pdf")
+            st.download_button("⬇️ Descargar Diagrama de Flujo (PDF)", data=data_pfd, file_name="DFP.pdf", mime="application/pdf")
         else:
             st.warning("⚠️ Sube 'PFD_ISO.pdf' a GitHub")
 
