@@ -157,7 +157,7 @@ try:
         api_key = st.text_input("Ingresa Gemini API Key", type="password")
         if api_key:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-2.5-pro')
             if "chat_history" not in st.session_state:
                 st.session_state.chat_history = []
             for msg in st.session_state.chat_history:
