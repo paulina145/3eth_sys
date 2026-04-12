@@ -138,7 +138,7 @@ try:
 
     with d1:
         if data_bloques:
-            st.download_button("⬇️ Descargar Diagrama de Bloques (PDF)", data=data_bloques, file_name="Diagrama de bloques.pdf", mime="application/pdf")
+            st.download_button("⬇️ Descargar Diagrama de Bloques (PDF)", data=data_bloques, file_name="Diagrama_de_bloques.pdf", mime="application/pdf")
         else:
             st.warning("⚠️ Sube 'Bloques_ISO.pdf' a GitHub")
 
