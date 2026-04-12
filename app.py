@@ -140,13 +140,13 @@ try:
         if data_bloques:
             st.download_button("⬇️ Descargar Diagrama de Bloques (PDF)", data=data_bloques, file_name="Diagrama_de_bloques.pdf", mime="application/pdf")
         else:
-            st.warning("⚠️ Sube 'Bloques_ISO.pdf' a GitHub")
+            st.warning("⚠️ Sube 'Diagrama_de_bloques.pdf' a GitHub")
 
     with d2:
         if data_pfd:
             st.download_button("⬇️ Descargar Diagrama de Flujo (PDF)", data=data_pfd, file_name="DFP.pdf", mime="application/pdf")
         else:
-            st.warning("⚠️ Sube 'PFD_ISO.pdf' a GitHub")
+            st.warning("⚠️ Sube 'DFP.pdf' a GitHub")
 
     # --- MODO TUTOR IA (PUNTOS 13, 14, 15) ---
     st.divider()
