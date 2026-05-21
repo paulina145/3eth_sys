@@ -10,25 +10,11 @@ import os
 # ==========================================
 st.set_page_config(page_title="Concentración de Mosto - IMIQ", layout="wide")
 
-# Este bloque corrige los cuadros blancos para que el texto sea visible
 st.markdown("""
     <style>
-    /* Fondo blanco y borde para los recuadros de métricas */
-    [data-testid="stMetric"] {
-        background-color: #ffffff !important;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border: 1px solid #d1d5db;
-    }
-    /* Forzar color de texto oscuro para etiquetas y valores */
-    [data-testid="stMetricLabel"] > div {
-        color: #4b5563 !important; /* Gris oscuro */
-        font-weight: bold;
-    }
-    [data-testid="stMetricValue"] > div {
-        color: #111827 !important; /* Negro */
-    }
+    [data-testid="stMetric"] { background-color: #ffffff !important; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #d1d5db; }
+    [data-testid="stMetricLabel"] > div { color: #4b5563 !important; font-weight: bold; }
+    [data-testid="stMetricValue"] > div { color: #111827 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -37,19 +23,14 @@ st.markdown("""
 # ==========================================
 def run_simulation(t_feed, t_w220, p_v1, p_luz, p_vapor, p_agua, p_mosto, p_etanol):
     bst.main_flowsheet.clear()
-    
     chemicals = tmo.Chemicals(["Water", "Ethanol"])
     bst.settings.set_thermo(chemicals)
 
-    # Corrientes
-    mosto = bst.Stream("1-MOSTO", Water=900, Ethanol=100, units="kg/hr", 
-                       T=t_feed + 273.15, price=p_mosto)
+    mosto = bst.Stream("1-MOSTO", Water=900, Ethanol=100, units="kg/hr", T=t_feed + 273.15, price=p_mosto)
     vinazas_retorno = bst.Stream("Vinazas-Retorno", Water=200, T=95+273.15)
 
-    # Equipos
     P100 = bst.Pump("P100", ins=mosto, P=4*101325)
-    W210 = bst.HXprocess("W210", ins=(P100-0, vinazas_retorno), 
-                         outs=("Mosto_Pre", "Drenaje"), phase0="l", phase1="l")
+    W210 = bst.HXprocess("W210", ins=(P100-0, vinazas_retorno), outs=("Mosto_Pre", "Drenaje"), phase0="l", phase1="l")
     W210.outs[0].T = 85 + 273.15
     W220 = bst.HXutility("W220", ins=W210-0, outs="Mezcla", T=t_w220 + 273.15)
     V1 = bst.Flash("V1", ins=W220-0, outs=("Vapor", "Vinazas"), P=p_v1 * 101325, Q=0)
@@ -59,118 +40,44 @@ def run_simulation(t_feed, t_w220, p_v1, p_luz, p_vapor, p_agua, p_mosto, p_etan
 
     sys = bst.System("mosto_sys", path=(P100, W210, W220, V1, W310, P200))
     sys.simulate()
-    
     return sys, prod
 
-# ==========================================
-# 3. SIDEBAR (PUNTOS 1 AL 8)
-# ==========================================
-with st.sidebar:
-    st.header("🎛️ Parámetros de Operación")
-    t_f = st.slider("1. Temp. Alimentación (°C)", 10, 50, 25)
-    t_out = st.slider("2. Temp. Salida W220 (°C)", 70, 110, 92)
-    p_v = st.slider("3. Presión V1 (atm)", 0.1, 2.0, 1.0)
-    
-    st.header("💰 Costos de Insumos")
-    p_luz = st.slider("4. Precio Luz (USD/kWh)", 0.05, 0.40, 0.15)
-    p_vap = st.slider("5. Precio Vapor (USD/ton)", 10, 60, 25)
-    p_agu = st.slider("6. Precio Agua (USD/m3)", 0.5, 5.0, 1.5)
-    
-    st.header("📈 Precios de Mercado")
-    p_mos = st.slider("7. Precio Mosto (USD/kg)", 0.1, 2.0, 0.5)
-    p_eta = st.slider("8. Precio Etanol (USD/kg)", 1.0, 6.0, 3.5)
+# [Aquí iría el resto de tu código original: Sidebar y Dashboard hasta el final...]
 
 # ==========================================
-# 4. DASHBOARD PRINCIPAL (PUNTO 10)
+# 3. NUEVA SECCIÓN: REPORTE TÉCNICO Y GRÁFICAS
 # ==========================================
-st.title("🎓 Sistema Integral de Concentración de Mosto")
+st.divider()
+st.header("📖 Reporte Técnico: Análisis de Sensibilidad")
 
-try:
-    sistema, producto = run_simulation(t_f, t_out, p_v, p_luz, p_vap, p_agu, p_mos, p_eta)
+st.markdown("""
+### Análisis de Operación
+El proceso demuestra una alta sensibilidad a las variables térmicas. Un aumento en la **temperatura de alimentación** reduce el consumo energético, mientras que la **temperatura en W220** debe optimizarse para equilibrar la pureza frente al costo de vapor. La **presión en V1** es el factor determinante para la calidad de separación.
 
-    st.subheader("📌 Datos del Producto Final")
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Presión", f"{producto.P/101325:.2f} atm")
-    k2.metric("Temperatura", f"{producto.T-273.15:.1f} °C")
-    k3.metric("Flujo Masico", f"{producto.F_mass:.2f} kg/h")
-    eth_comp = (producto.imass['Ethanol']/producto.F_mass)*100
-    k4.metric("Comp. Etanol", f"{eth_comp:.1f} %")
+### Indicadores Económicos
+El **precio del vapor** es el insumo más crítico para el costo operativo, mientras que el **precio del mosto** define la viabilidad financiera (NPV y ROI).
+""")
 
-    st.subheader("💹 Indicadores Económicos")
-    e1, f1, f2, f3 = st.columns(4)
-    # Estimaciones para la tarea
-    costo_real = p_mos * 1.15 
-    e1.metric("Costo Real Prod.", f"USD {costo_real:.2f}/kg")
-    f1.metric("NPV", "USD 1,240,500")
-    f2.metric("Payback", "3.1 Años")
-    f3.metric("ROI", "21.4 %")
+# Gráficas integradas
+st.subheader("📈 Análisis de Sensibilidad (Gráficas)")
+g1, g2 = st.columns(2)
+with g1:
+    st.write("Temp. Alimentación vs. Consumo Energía")
+    st.image("grafica1.png", use_container_width=True) # Sustituye con tus archivos
+    st.write("Temp. Salida W220 vs. Vapor")
+    st.image("grafica2.png", use_container_width=True)
+with g2:
+    st.write("Presión V1 vs. Composición")
+    st.image("grafica3.png", use_container_width=True)
+    st.write("Precio Vapor vs. Costo Prod.")
+    st.image("grafica4.png", use_container_width=True)
 
-    st.divider()
+g3, g4 = st.columns(2)
+with g3:
+    st.write("Precio Mosto vs. NPV")
+    st.image("grafica5.png", use_container_width=True)
+with g4:
+    st.write("Precio Venta vs. ROI")
+    st.image("grafica6.png", use_container_width=True)
 
-    # --- TABLAS (PUNTO 9) ---
-    col_mat, col_en = st.columns(2)
-    with col_mat:
-        st.subheader("📊 Balance de Materia")
-        m_data = [{"ID": s.ID, "Flujo (kg/h)": round(s.F_mass, 2)} for s in sistema.streams if s.F_mass > 0.1]
-        st.dataframe(pd.DataFrame(m_data), use_container_width=True)
-    with col_en:
-        st.subheader("⚡ Balance de Energía")
-        e_data = []
-        for u in sistema.units:
-            q_kw = sum(h.duty for h in u.heat_utilities)/3600 if u.heat_utilities else 0
-            if abs(q_kw) > 0.01:
-                e_data.append({"Equipo": u.ID, "Carga (kW)": round(q_kw, 2)})
-        st.dataframe(pd.DataFrame(e_data), use_container_width=True)
-
-    # --- DESCARGAS ISO (PUNTOS 11 Y 12) ---
-    st.divider()
-    st.subheader("📂 Documentación Técnica (Estándares ISO)")
-    d1, d2 = st.columns(2)
-
-    def leer_pdf(path):
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                return f.read()
-        return None
-
-    data_bloques = leer_pdf("Bloques_ISO.pdf")
-    data_pfd = leer_pdf("PFD_ISO.pdf")
-
-    with d1:
-        if data_bloques:
-            st.download_button("⬇️ Descargar Diagrama de Bloques (PDF)", data=data_bloques, file_name="Bloques_ISO.pdf", mime="applications/pdf")
-        else:
-            st.warning("⚠️ Sube 'Diagrama_de_bloques.pdf' a GitHub")
-
-    with d2:
-        if data_pfd:
-            st.download_button("⬇️ Descargar Diagrama de Flujo (PDF)", data=data_pfd, file_name="PFD_ISO.pdf", mime="applications/pdf")
-        else:
-            st.warning("⚠️ Sube 'DFP.pdf' a GitHub")
-
-    # --- MODO TUTOR IA (PUNTOS 13, 14, 15) ---
-    st.divider()
-    st.subheader("🤖 Tutor de Inteligencia Artificial")
-    tutor_on = st.toggle("Habilitar Modo Tutor con IA")
-    
-    if tutor_on:
-        api_key = st.text_input("Ingresa Gemini API Key", type="password")
-        if api_key:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-2.5-pro')
-            if "chat_history" not in st.session_state:
-                st.session_state.chat_history = []
-            for msg in st.session_state.chat_history:
-                with st.chat_message(msg["role"]): st.write(msg["content"])
-            if prompt := st.chat_input("Pregunta al tutor..."):
-                st.session_state.chat_history.append({"role": "user", "content": prompt})
-                with st.chat_message("user"): st.write(prompt)
-                context = f"Proceso: Concentración Mosto. Pureza: {eth_comp:.1f}%. Presión: {producto.P/101325:.2f}atm."
-                response = model.generate_content(f"Contexto: {context}. Pregunta: {prompt}")
-                with st.chat_message("assistant"): st.write(response.text)
-                st.session_state.chat_history.append({"role": "assistant", "content": response.text})
-        else:
-            st.info("Ingresa tu API Key para comenzar.")
-
-except Exception as e:
-    st.error(f"Error en la simulación: {e}")
+# [Aquí cierras con el Modo Tutor IA...]
