@@ -118,20 +118,14 @@ with g1:
     st.write("**1. Temperatura de Alimentación vs. Consumo Energía**")
     st.line_chart(df_energia, color="#ff4b4b")
     
-    st.write("**2. Temperatura Salida W220 vs. Requerimiento Vapor**")
-    st.line_chart(df_vapor, color="#ff4b4b")
-    
-    st.write("**3. Precio del Mosto vs. NPV**")
+    st.write("**2. Precio del Mosto vs. NPV**")
     st.line_chart(df_npv, color="#0068c9")
 
 with g2:
-    st.write("**4. Presión V1 vs. Composición (Pureza)**")
+    st.write("**3. Presión V1 vs. Composición (Pureza)**")
     st.line_chart(df_pureza, color="#29b09d")
     
-    st.write("**5. Precio Vapor vs. Costo Producción**")
-    st.line_chart(df_costo, color="#ff4b4b")
-    
-    st.write("**6. Precio Venta Etanol vs. ROI**")
+    st.write("**4. Precio Venta Etanol vs. ROI**")
     st.line_chart(df_roi, color="#0068c9")
 # ==========================================
 # 5. DOCUMENTACIÓN Y TUTOR IA
