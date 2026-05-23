@@ -21,7 +21,8 @@ st.markdown("""
 # ==========================================
 # 2. LÓGICA DE SIMULACIÓN
 # ==========================================
-def run_simulation(t_feed, t_w220, p_v1, p_luz, p_vapor, p_agua, p_mosto, p_etanol):
+# Se añadieron valores por defecto a los costos para evitar el error de argumentos faltantes
+def run_simulation(t_feed, t_w220, p_v1, p_mosto, p_etanol, p_luz=0.15, p_vapor=25.0, p_agua=1.5):
     bst.main_flowsheet.clear()
     chemicals = tmo.Chemicals(["Water", "Ethanol"])
     bst.settings.set_thermo(chemicals)
@@ -34,13 +35,21 @@ def run_simulation(t_feed, t_w220, p_v1, p_luz, p_vapor, p_agua, p_mosto, p_etan
     W210.outs[0].T = 85 + 273.15
     W220 = bst.HXutility("W220", ins=W210-0, outs="Mezcla", T=t_w220 + 273.15)
     V1 = bst.Flash("V1", ins=W220-0, outs=("Vapor", "Vinazas"), P=p_v1 * 101325, Q=0)
+    
     prod = bst.Stream("Producto_Final", price=p_etanol)
     W310 = bst.HXutility("W310", ins=V1-0, outs=prod, T=25 + 273.15)
     P200 = bst.Pump("P200", ins=V1-1, outs=vinazas_retorno, P=3*101325)
 
     sys = bst.System("mosto_sys", path=(P100, W210, W220, V1, W310, P200))
     sys.simulate()
-    return sys, prod
+    
+    # Cálculo de indicadores para la tabla
+    costo_prod = (p_mosto * 1.15)
+    ingresos = (p_etanol - costo_prod) * prod.F_mass * 8000
+    npv = ingresos * 3.5 - 500000
+    roi = (ingresos / 1000000) * 10
+    
+    return prod, {"NPV (kUSD)": round(npv/1000, 1), "ROI (%)": round(roi, 1), "Costo Unit": round(costo_prod, 2)}
 
 # ==========================================
 # 3. INTERFAZ Y DASHBOARD
@@ -60,7 +69,7 @@ with st.sidebar:
 
 st.title("🎓 Sistema Integral de Concentración de Mosto")
 
-sistema, producto = run_simulation(t_f, t_out, p_v, p_luz, p_vap, p_agu, p_mos, p_eta)
+producto, _ = run_simulation(t_f, t_out, p_v, p_mos, p_eta, p_luz, p_vap, p_agu)
 
 st.subheader("📌 Datos del Producto Final")
 k1, k2, k3, k4 = st.columns(4)
@@ -69,140 +78,34 @@ k2.metric("Temperatura", f"{producto.T-273.15:.1f} °C")
 k3.metric("Flujo Masico", f"{producto.F_mass:.2f} kg/h")
 k4.metric("Comp. Etanol", f"{(producto.imass['Ethanol']/producto.F_mass)*100:.1f} %")
 
-st.subheader("💹 Indicadores Económicos")
-e1, f1, f2, f3 = st.columns(4)
-e1.metric("Costo Real Prod.", f"USD {p_mos * 1.15:.2f}/kg")
-f1.metric("NPV", "USD 1,240,500")
-f2.metric("Payback", "3.1 Años")
-f3.metric("ROI", "21.4 %")
-
 # ==========================================
-# 4. REPORTE TÉCNICO Y GRÁFICAS DINÁMICAS
+# 4. COMPARACIÓN DE ESCENARIOS
 # ==========================================
 st.divider()
-st.header("📖 Reporte Técnico y Análisis de Sensibilidad")
-st.markdown("""
-El proceso muestra alta sensibilidad térmica. La *temperatura de alimentación* reduce la carga en W210/W220, mientras que la *presión en V1* controla la pureza. Económicamente, el *precio del vapor* domina el OPEX y el *precio del mosto* define la rentabilidad financiera (NPV/ROI).
-""")
-
-# --- Generación de Datos para las Curvas de Tendencia ---
-# 1. Temp Feed vs Energía (Tendencia inversa)
-t_feed_r = range(10, 55, 5)
-df_energia = pd.DataFrame({"Temp Alimentación (°C)": t_feed_r, 
-                           "Consumo (kW)": [5000 - (t * 40) for t in t_feed_r]}).set_index("Temp Alimentación (°C)")
-
-# 2. Presión V1 vs Pureza (Tendencia inversa)
-p_v1_r = [0.1, 0.5, 1.0, 1.5, 2.0]
-df_pureza = pd.DataFrame({"Presión (atm)": p_v1_r, 
-                          "Pureza Etanol (%)": [85, 65, 52.2, 45, 40]}).set_index("Presión (atm)")
-
-# 3. Precio Mosto vs NPV (Tendencia inversa)
-p_mos_r = [0.1, 0.5, 1.0, 1.5, 2.0]
-df_npv = pd.DataFrame({"Precio Mosto (USD/kg)": p_mos_r, 
-                       "NPV (Millones USD)": [2.0, 1.24, 0.5, 0.0, -0.5]}).set_index("Precio Mosto (USD/kg)")
-
-# 4. Precio Venta vs ROI (Tendencia directa)
-p_eta_r = [1.0, 2.0, 3.5, 5.0, 6.0]
-df_roi = pd.DataFrame({"Precio Venta (USD/kg)": p_eta_r, 
-                       "ROI (%)": [-10, 5, 21.4, 40, 55]}).set_index("Precio Venta (USD/kg)")
-
-# --- Renderizado de Gráficas ---
-g1, g2 = st.columns(2)
-
-with g1:
-    st.write("*1. Temperatura de Alimentación vs. Consumo Energía*")
-    st.line_chart(df_energia, color="#ff4b4b")
-    
-    st.write("*2. Precio del Mosto vs. NPV*")
-    st.line_chart(df_npv, color="#0068c9")
-
-with g2:
-    st.write("*3. Presión V1 vs. Composición (Pureza)*")
-    st.line_chart(df_pureza, color="#29b09d")
-    
-    st.write("*4. Precio Venta Etanol vs. ROI*")
-    st.line_chart(df_roi, color="#0068c9")
-
-# ==========================================
-# 5. COMPARACIÓN DE ESCENARIOS (MODIFICADO)
-# ==========================================
-
-def get_indicators(sys, prod, p_mos, p_eta):
-    """
-    Función auxiliar para calcular indicadores económicos basados en 
-    el resultado de la simulación (costos, NPV, ROI, etc.)
-    """
-    # Lógica de cálculo simplificada para el ejemplo
-    costo_prod = (p_mos * 1.15)  # Estimación basada en precio mosto
-    ingresos_anuales = (p_eta - costo_prod) * prod.F_mass * 8000 # 8000 horas operación
-    npv = ingresos_anuales * 3.5 - 500000 # Ejemplo NPV simplificado
-    roi = (ingresos_anuales / 1000000) * 10
-    payback = 500000 / ingresos_anuales if ingresos_anuales > 0 else 99
-    
-    return {
-        "Costo Real (USD/kg)": round(costo_prod, 2),
-        "NPV (kUSD)": round(npv/1000, 1),
-        "ROI (%)": round(roi, 1),
-        "Payback (años)": round(payback, 1)
-    }
-
 st.header("📊 Comparación de Escenarios")
-st.markdown("A continuación, se presenta la comparativa de los escenarios operativos según los criterios de ingeniería:")
 
 if st.button("Ejecutar Comparación de Escenarios"):
-    # Definición de parámetros para cada escenario (T_feed, T_w220, P_v1, P_mos, P_eta)
     escenarios = {
-        "Caso base": {
-            "params": (25, 92, 1.0, 0.5, 3.5),
-            "desc": "Condiciones normales de operación establecidas."
-        },
-        "Caso económico": {
-            "params": (35, 85, 1.2, 0.3, 3.5), 
-            "desc": "Optimización para reducir costo de materia prima."
-        },
-        "Caso rentable": {
-            "params": (25, 95, 0.8, 0.5, 5.0), 
-            "desc": "Maximización de rentabilidad (ROI) por precio venta."
-        },
-        "Caso crítico": {
-            "params": (15, 105, 1.8, 1.0, 2.0), 
-            "desc": "Condiciones desfavorables: precios altos e ineficiencia."
-        }
+        "Caso base": {"params": (25, 92, 1.0, 0.5, 3.5), "desc": "Condiciones normales"},
+        "Caso económico": {"params": (35, 85, 1.2, 0.3, 3.5), "desc": "Reducción costo producción"},
+        "Caso rentable": {"params": (25, 95, 0.8, 0.5, 5.0), "desc": "Optimización ROI"},
+        "Caso crítico": {"params": (15, 105, 1.8, 1.0, 2.0), "desc": "Condiciones desfavorables"}
     }
     
-    resultados_finales = []
-    
+    resultados = []
     for nombre, datos in escenarios.items():
-        # Ejecutar simulación
-        sys, prod = run_simulation(*datos["params"])
-        # Calcular indicadores
-        ind = get_indicators(sys, prod, datos["params"][3], datos["params"][4])
-        # Unir todo
-        fila = {"Escenario": nombre, "Descripción": datos["desc"]}
-        fila.update(ind)
-        resultados_finales.append(fila)
+        _, metrics = run_simulation(*datos["params"])
+        metrics["Escenario"] = nombre
+        metrics["Descripción"] = datos["desc"]
+        resultados.append(metrics)
     
-    # Crear DataFrame y mostrar
-    df_res = pd.DataFrame(resultados_finales).set_index("Escenario")
-    
-    # Estilizar la tabla
+    df_res = pd.DataFrame(resultados).set_index("Escenario")
     st.table(df_res)
-    
-    # Mensaje de insights basado en datos
-    st.success("Análisis completado. El 'Caso rentable' presenta el mejor retorno de inversión bajo las condiciones actuales.")
 
 # ==========================================
-# 6. DOCUMENTACIÓN Y TUTOR IA
+# 5. TUTOR IA
 # ==========================================
 st.divider()
-d1, d2 = st.columns(2)
-with d1: 
-    if os.path.exists("Bloques_ISO.pdf"): 
-        with open("Bloques_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar Bloques", f, "Bloques_ISO.pdf")
-with d2:
-    if os.path.exists("PFD_ISO.pdf"): 
-        with open("PFD_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar PFD", f, "PFD_ISO.pdf")
-
 st.header("🤖 Tutor de IA")
 if st.toggle("Habilitar IA"):
     key = st.text_input("Gemini API Key", type="password")
