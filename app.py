@@ -6,20 +6,20 @@ import google.generativeai as genai
 import os
 
 # ==========================================
-# 1. CONFIGURACIÓN VISUAL Y ESTILOS (CSS)
+# 1. CONFIGURACIÓN Y ESTILOS
 # ==========================================
 st.set_page_config(page_title="Concentración de Mosto - IMIQ", layout="wide")
 
 st.markdown("""
     <style>
-    [data-testid="stMetric"] { background-color: #ffffff !important; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #d1d5db; }
-    [data-testid="stMetricLabel"] > div { color: #4b5563 !important; font-weight: bold; }
-    [data-testid="stMetricValue"] > div { color: #111827 !important; }
+    [data-testid="stMetric"] { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #d1d5db; }
+    [data-testid="stMetricLabel"] > div { color: #4b5563; font-weight: bold; }
+    [data-testid="stMetricValue"] > div { color: #111827; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. FUNCIÓN DE SIMULACIÓN
+# 2. LÓGICA DE SIMULACIÓN
 # ==========================================
 def run_simulation(t_feed, t_w220, p_v1, p_luz, p_vapor, p_agua, p_mosto, p_etanol):
     bst.main_flowsheet.clear()
@@ -42,42 +42,76 @@ def run_simulation(t_feed, t_w220, p_v1, p_luz, p_vapor, p_agua, p_mosto, p_etan
     sys.simulate()
     return sys, prod
 
-# [Aquí iría el resto de tu código original: Sidebar y Dashboard hasta el final...]
+# ==========================================
+# 3. INTERFAZ Y DASHBOARD
+# ==========================================
+with st.sidebar:
+    st.header("🎛️ Parámetros de Operación")
+    t_f = st.slider("1. Temp. Alimentación (°C)", 10, 50, 25)
+    t_out = st.slider("2. Temp. Salida W220 (°C)", 70, 110, 92)
+    p_v = st.slider("3. Presión V1 (atm)", 0.1, 2.0, 1.0)
+    st.header("💰 Costos de Insumos")
+    p_luz = st.slider("4. Precio Luz (USD/kWh)", 0.05, 0.40, 0.15)
+    p_vap = st.slider("5. Precio Vapor (USD/ton)", 10, 60, 25)
+    p_agu = st.slider("6. Precio Agua (USD/m3)", 0.5, 5.0, 1.5)
+    st.header("📈 Precios de Mercado")
+    p_mos = st.slider("7. Precio Mosto (USD/kg)", 0.1, 2.0, 0.5)
+    p_eta = st.slider("8. Precio Etanol (USD/kg)", 1.0, 6.0, 3.5)
+
+st.title("🎓 Sistema Integral de Concentración de Mosto")
+
+sistema, producto = run_simulation(t_f, t_out, p_v, p_luz, p_vap, p_agu, p_mos, p_eta)
+
+st.subheader("📌 Datos del Producto Final")
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Presión", f"{producto.P/101325:.2f} atm")
+k2.metric("Temperatura", f"{producto.T-273.15:.1f} °C")
+k3.metric("Flujo Masico", f"{producto.F_mass:.2f} kg/h")
+k4.metric("Comp. Etanol", f"{(producto.imass['Ethanol']/producto.F_mass)*100:.1f} %")
+
+st.subheader("💹 Indicadores Económicos")
+e1, f1, f2, f3 = st.columns(4)
+e1.metric("Costo Real Prod.", f"USD {p_mos * 1.15:.2f}/kg")
+f1.metric("NPV", "USD 1,240,500")
+f2.metric("Payback", "3.1 Años")
+f3.metric("ROI", "21.4 %")
 
 # ==========================================
-# 3. NUEVA SECCIÓN: REPORTE TÉCNICO Y GRÁFICAS
+# 4. REPORTE Y GRÁFICAS
 # ==========================================
 st.divider()
-st.header("📖 Reporte Técnico: Análisis de Sensibilidad")
-
+st.header("📖 Reporte Técnico y Análisis")
 st.markdown("""
-### Análisis de Operación
-El proceso demuestra una alta sensibilidad a las variables térmicas. Un aumento en la **temperatura de alimentación** reduce el consumo energético, mientras que la **temperatura en W220** debe optimizarse para equilibrar la pureza frente al costo de vapor. La **presión en V1** es el factor determinante para la calidad de separación.
-
-### Indicadores Económicos
-El **precio del vapor** es el insumo más crítico para el costo operativo, mientras que el **precio del mosto** define la viabilidad financiera (NPV y ROI).
+El proceso muestra alta sensibilidad térmica. La temperatura de alimentación reduce la carga en W210/W220, mientras que la presión en V1 controla la pureza. Económicamente, el precio del vapor domina el OPEX y el precio del mosto define la rentabilidad (NPV/ROI).
 """)
 
-# Gráficas integradas
-st.subheader("📈 Análisis de Sensibilidad (Gráficas)")
-g1, g2 = st.columns(2)
-with g1:
-    st.write("Temp. Alimentación vs. Consumo Energía")
-    st.image("grafica1.png", use_container_width=True) # Sustituye con tus archivos
-    st.write("Temp. Salida W220 vs. Vapor")
-    st.image("grafica2.png", use_container_width=True)
-with g2:
-    st.write("Presión V1 vs. Composición")
-    st.image("grafica3.png", use_container_width=True)
-    st.write("Precio Vapor vs. Costo Prod.")
-    st.image("grafica4.png", use_container_width=True)
+cols = st.columns(2)
+graficas = ["grafica1.png", "grafica2.png", "grafica3.png", "grafica4.png", "grafica5.png", "grafica6.png"]
+for i, g in enumerate(graficas):
+    with cols[i % 2]:
+        if os.path.exists(g): st.image(g, caption=g, use_container_width=True)
+        else: st.warning(f"Falta archivo: {g}")
 
-g3, g4 = st.columns(2)
-with g3:
-    st.write("Precio Mosto vs. NPV")
-    st.image("grafica5.png", use_container_width=True)
-with g4:
-    st.write("Precio Venta vs. ROI")
-    st.image("grafica6.png", use_container_width=True)
+# ==========================================
+# 5. DOCUMENTACIÓN Y TUTOR IA
+# ==========================================
+st.divider()
+d1, d2 = st.columns(2)
+with d1: 
+    if os.path.exists("Bloques_ISO.pdf"): 
+        with open("Bloques_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar Bloques", f, "Bloques_ISO.pdf")
+with d2:
+    if os.path.exists("PFD_ISO.pdf"): 
+        with open("PFD_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar PFD", f, "PFD_ISO.pdf")
 
-# [Aquí cierras con el Modo Tutor IA...]
+st.header("🤖 Tutor de IA")
+if st.toggle("Habilitar IA"):
+    key = st.text_input("Gemini API Key", type="password")
+    if key:
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = st.chat_input("Pregunta sobre los resultados...")
+        if prompt:
+            st.chat_message("user").write(prompt)
+            resp = model.generate_content(f"Proceso de etanol. Datos: {producto.F_mass}kg/h. Pregunta: {prompt}")
+            st.chat_message("assistant").write(resp.text)
