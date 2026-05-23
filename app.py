@@ -94,27 +94,19 @@ t_feed_r = range(10, 55, 5)
 df_energia = pd.DataFrame({"Temp Alimentación (°C)": t_feed_r, 
                            "Consumo (kW)": [5000 - (t * 40) for t in t_feed_r]}).set_index("Temp Alimentación (°C)")
 
-# 2. Temp W220 vs Vapor (Tendencia directa)
-t_w220_r = range(70, 115, 5)
-df_vapor = pd.DataFrame({"Temp W220 (°C)": t_w220_r, 
-                         "Req. Vapor (kg/h)": [(t - 60) * 15 for t in t_w220_r]}).set_index("Temp W220 (°C)")
 
-# 3. Presión V1 vs Pureza (Tendencia inversa)
+# 2. Presión V1 vs Pureza (Tendencia inversa)
 p_v1_r = [0.1, 0.5, 1.0, 1.5, 2.0]
 df_pureza = pd.DataFrame({"Presión (atm)": p_v1_r, 
                           "Pureza Etanol (%)": [85, 65, 52.2, 45, 40]}).set_index("Presión (atm)")
 
-# 4. Precio Vapor vs Costo Prod (Tendencia directa)
+# 3. Precio Vapor vs Costo Prod (Tendencia directa)
 p_vap_r = range(10, 65, 10)
 df_costo = pd.DataFrame({"Precio Vapor (USD/ton)": p_vap_r, 
                          "Costo Prod. (USD/kg)": [0.3 + (p * 0.01) for p in p_vap_r]}).set_index("Precio Vapor (USD/ton)")
 
-# 5. Precio Mosto vs NPV (Tendencia inversa)
-p_mos_r = [0.1, 0.5, 1.0, 1.5, 2.0]
-df_npv = pd.DataFrame({"Precio Mosto (USD/kg)": p_mos_r, 
-                       "NPV (Millones USD)": [2.0, 1.24, 0.5, 0.0, -0.5]}).set_index("Precio Mosto (USD/kg)")
 
-# 6. Precio Venta vs ROI (Tendencia directa)
+# 4. Precio Venta vs ROI (Tendencia directa)
 p_eta_r = [1.0, 2.0, 3.5, 5.0, 6.0]
 df_roi = pd.DataFrame({"Precio Venta (USD/kg)": p_eta_r, 
                        "ROI (%)": [-10, 5, 21.4, 40, 55]}).set_index("Precio Venta (USD/kg)")
