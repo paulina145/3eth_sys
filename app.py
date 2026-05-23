@@ -124,7 +124,35 @@ with g2:
     st.line_chart(df_roi, color="#0068c9")
 
 # ==========================================
-# 5. DOCUMENTACIÓN Y TUTOR IA
+# 5. COMPARACIÓN DE ESCENARIOS
+# ==========================================
+st.divider()
+st.header("📊 Comparación de Escenarios")
+st.markdown("La aplicación permite comparar distintos escenarios de operación. Se utiliza la siguiente estructura:")
+
+# Creación de la tabla basada en la imagen proporcionada
+escenarios_data = {
+    "Escenario": ["Caso base", "Caso económico", "Caso rentable", "Caso crítico"],
+    "Descripción": [
+        "Condiciones normales de operación establecidas por el equipo.",
+        "Condiciones que buscan reducir el costo real de producción.",
+        "Condiciones que buscan mejorar NPV, Payback y ROI.",
+        "Condiciones desfavorables de operación o precios."
+    ],
+    "Resultados esperados": [
+        "Sirve como punto de comparación.",
+        "Menor costo por unidad de producto.",
+        "Mayor rentabilidad del proceso.",
+        "Identificación de riesgos económicos u operativos."
+    ]
+}
+
+df_escenarios = pd.DataFrame(escenarios_data)
+# st.table muestra el dataframe con un formato de tabla limpio de HTML/CSS nativo de Streamlit
+st.table(df_escenarios)
+
+# ==========================================
+# 6. DOCUMENTACIÓN Y TUTOR IA
 # ==========================================
 st.divider()
 d1, d2 = st.columns(2)
