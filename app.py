@@ -117,3 +117,4 @@ if st.toggle("Habilitar IA"):
             st.chat_message("user").write(prompt)
             resp = model.generate_content(f"Proceso de etanol. Datos: {producto.F_mass}kg/h. Pregunta: {prompt}")
             st.chat_message("assistant").write(resp.text)
+            
