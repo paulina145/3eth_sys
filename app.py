@@ -21,7 +21,6 @@ st.markdown("""
 # ==========================================
 # 2. LÓGICA DE SIMULACIÓN
 # ==========================================
-# Usamos valores por defecto para que la función sea flexible
 def run_simulation(t_feed, t_w220, p_v1, p_mosto, p_etanol, p_luz=0.15, p_vapor=25.0, p_agua=1.5):
     bst.main_flowsheet.clear()
     chemicals = tmo.Chemicals(["Water", "Ethanol"])
@@ -43,11 +42,10 @@ def run_simulation(t_feed, t_w220, p_v1, p_mosto, p_etanol, p_luz=0.15, p_vapor=
     sys = bst.System("mosto_sys", path=(P100, W210, W220, V1, W310, P200))
     sys.simulate()
     
-    # Cálculo interno para indicadores
-    costo_prod = (p_mosto * 1.15)
-    ingresos_anuales = (p_etanol - costo_prod) * prod.F_mass * 8000
-    npv = ingresos_anuales * 3.5 - 500000
-    roi = (ingresos_anuales / 1000000) * 10
+    costo_prod = (p_mosto * 1.15) + (p_vapor * 0.05) # Incluye costo vapor
+    ingresos = (p_etanol - costo_prod) * prod.F_mass * 8000
+    npv = ingresos * 3.5 - 500000
+    roi = (ingresos / 1000000) * 10
     
     return prod, {"NPV (kUSD)": round(npv/1000, 1), "ROI (%)": round(roi, 1), "Costo Unit": round(costo_prod, 2)}
 
@@ -69,8 +67,7 @@ with st.sidebar:
 
 st.title("🎓 Sistema Integral de Concentración de Mosto")
 
-# Ejecución principal
-producto, indicadores_actuales = run_simulation(t_f, t_out, p_v, p_mos, p_eta, p_luz, p_vap, p_agu)
+producto, ind_act = run_simulation(t_f, t_out, p_v, p_mos, p_eta, p_luz, p_vap, p_agu)
 
 st.subheader("📌 Datos del Producto Final")
 k1, k2, k3, k4 = st.columns(4)
@@ -79,32 +76,36 @@ k2.metric("Temperatura", f"{producto.T-273.15:.1f} °C")
 k3.metric("Flujo Masico", f"{producto.F_mass:.2f} kg/h")
 k4.metric("Comp. Etanol", f"{(producto.imass['Ethanol']/producto.F_mass)*100:.1f} %")
 
-st.subheader("💹 Indicadores Económicos")
-e1, f1, f2, f3 = st.columns(4)
-e1.metric("Costo Real Prod.", f"USD {indicadores_actuales['Costo Unit']}/kg")
-f1.metric("NPV", f"USD {indicadores_actuales['NPV (kUSD)']} k")
-f2.metric("ROI", f"{indicadores_actuales['ROI (%)']} %")
-f3.metric("Payback", "3.1 Años")
-
 # ==========================================
-# 4. REPORTES Y GRÁFICAS
+# 4. REPORTES Y SENSIBILIDAD (GRÁFICAS)
 # ==========================================
 st.divider()
-st.header("📖 Reporte Técnico y Análisis de Sensibilidad")
+st.header("📖 Análisis de Sensibilidad")
 
-# Datos para gráficas
-t_feed_r = range(10, 55, 5)
-df_energia = pd.DataFrame({"Temp Alimentación (°C)": t_feed_r, "Consumo (kW)": [5000 - (t * 40) for t in t_feed_r]}).set_index("Temp Alimentación (°C)")
-p_v1_r = [0.1, 0.5, 1.0, 1.5, 2.0]
-df_pureza = pd.DataFrame({"Presión (atm)": p_v1_r, "Pureza Etanol (%)": [85, 65, 52.2, 45, 40]}).set_index("Presión (atm)")
+# Generación de datos sintéticos para las gráficas
+precios_vapor = [10, 25, 40, 60]
+precios_mosto = [0.1, 0.5, 1.0, 2.0]
+precios_venta = [1.0, 3.0, 5.0, 6.0]
 
-g1, g2 = st.columns(2)
-with g1:
-    st.write("*1. Temperatura vs. Consumo Energía*")
-    st.line_chart(df_energia, color="#ff4b4b")
-with g2:
-    st.write("*2. Presión V1 vs. Pureza*")
-    st.line_chart(df_pureza, color="#29b09d")
+df_sens = pd.DataFrame({
+    "Vapor (USD/ton)": precios_vapor,
+    "Costo Prod (USD/kg)": [0.3 + (p*0.01) for p in precios_vapor],
+    "Mosto (USD/kg)": precios_mosto,
+    "NPV (kUSD)": [1000 - (p*400) for p in precios_mosto],
+    "Venta (USD/kg)": precios_venta,
+    "ROI (%)": [-5, 15, 45, 60]
+})
+
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.write("*Vapor vs. Costo Prod.*")
+    st.line_chart(df_sens.set_index("Vapor (USD/ton)")["Costo Prod (USD/kg)"])
+with c2:
+    st.write("*Mosto vs. NPV*")
+    st.line_chart(df_sens.set_index("Mosto (USD/kg)")["NPV (kUSD)"])
+with c3:
+    st.write("*Venta vs. ROI (%)*")
+    st.line_chart(df_sens.set_index("Venta (USD/kg)")["ROI (%)"])
 
 # ==========================================
 # 5. COMPARACIÓN DE ESCENARIOS
@@ -114,11 +115,12 @@ st.header("📊 Comparación de Escenarios")
 
 if st.button("Ejecutar Comparación de Escenarios"):
     escenarios = {
-        "Caso base": {"params": (25, 92, 1.0, 0.5, 3.5), "desc": "Condiciones normales"},
-        "Caso económico": {"params": (35, 85, 1.2, 0.3, 3.5), "desc": "Reducción costo"},
-        "Caso rentable": {"params": (25, 95, 0.8, 0.5, 5.0), "desc": "Maximización ROI"},
-        "Caso crítico": {"params": (15, 105, 1.8, 1.0, 2.0), "desc": "Crítico/Desfavorable"}
+        "Caso base": {"params": (25, 92, 1.0, 0.5, 3.5), "desc": "Normal"},
+        "Caso económico": {"params": (35, 85, 1.2, 0.3, 3.5), "desc": "Ahorro costo"},
+        "Caso rentable": {"params": (25, 95, 0.8, 0.5, 5.0), "desc": "Max ROI"},
+        "Caso crítico": {"params": (15, 105, 1.8, 1.0, 2.0), "desc": "Crítico"}
     }
+    
     resultados = []
     for nombre, datos in escenarios.items():
         _, metrics = run_simulation(*datos["params"])
@@ -126,8 +128,7 @@ if st.button("Ejecutar Comparación de Escenarios"):
         metrics["Descripción"] = datos["desc"]
         resultados.append(metrics)
     
-    df_res = pd.DataFrame(resultados).set_index("Escenario")
-    st.table(df_res)
+    st.table(pd.DataFrame(resultados).set_index("Escenario"))
 
 # ==========================================
 # 6. TUTOR IA
@@ -142,5 +143,5 @@ if st.toggle("Habilitar IA"):
         prompt = st.chat_input("Pregunta sobre los resultados...")
         if prompt:
             st.chat_message("user").write(prompt)
-            resp = model.generate_content(f"Proceso de etanol. Datos: {producto.F_mass}kg/h. Pregunta: {prompt}")
+            resp = model.generate_content(f"Proceso: {producto.F_mass}kg/h. Pregunta: {prompt}")
             st.chat_message("assistant").write(resp.text)
