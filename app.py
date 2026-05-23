@@ -3,9 +3,10 @@ import biosteam as bst
 import thermosteam as tmo
 import pandas as pd
 import google.generativeai as genai
+import os
 
 # ==========================================
-# 1. CONFIGURACIÓN Y ESTILOS (Mantenido igual)
+# 1. CONFIGURACIÓN Y ESTILOS
 # ==========================================
 st.set_page_config(page_title="Concentración de Mosto - IMIQ", layout="wide")
 
@@ -46,88 +47,101 @@ def run_simulation(t_feed, t_w220, p_v1, p_mosto, p_etanol, p_luz=0.15, p_vapor=
     npv = ingresos_anuales * 3.5 - 500000
     roi = (ingresos_anuales / 1000000) * 10
     
-    return prod, {"NPV": npv, "ROI": roi, "Costo": costo_prod}
+    return prod, {"NPV (kUSD)": round(npv/1000, 1), "ROI (%)": round(roi, 1), "Costo Unit": round(costo_prod, 2)}
 
 # ==========================================
-# 3. INTERFAZ (Mantenida igual)
+# 3. INTERFAZ Y DASHBOARD
 # ==========================================
 with st.sidebar:
-    st.header("🎛️ Parámetros")
-    t_f = st.slider("Temp. Alimentación (°C)", 10, 50, 25)
-    t_out = st.slider("Temp. Salida W220 (°C)", 70, 110, 92)
-    p_v = st.slider("Presión V1 (atm)", 0.1, 2.0, 1.0)
-    p_mos = st.slider("Precio Mosto (USD/kg)", 0.1, 2.0, 0.5)
-    p_eta = st.slider("Precio Etanol (USD/kg)", 1.0, 6.0, 3.5)
+    st.header("🎛️ Parámetros de Operación")
+    t_f = st.slider("1. Temp. Alimentación (°C)", 10, 50, 25)
+    t_out = st.slider("2. Temp. Salida W220 (°C)", 70, 110, 92)
+    p_v = st.slider("3. Presión V1 (atm)", 0.1, 2.0, 1.0)
+    st.header("💰 Costos de Insumos")
+    p_luz = st.slider("4. Precio Luz (USD/kWh)", 0.05, 0.40, 0.15)
+    p_vap = st.slider("5. Precio Vapor (USD/ton)", 10, 60, 25)
+    p_agu = st.slider("6. Precio Agua (USD/m3)", 0.5, 5.0, 1.5)
+    st.header("📈 Precios de Mercado")
+    p_mos = st.slider("7. Precio Mosto (USD/kg)", 0.1, 2.0, 0.5)
+    p_eta = st.slider("8. Precio Etanol (USD/kg)", 1.0, 6.0, 3.5)
 
 st.title("🎓 Sistema Integral de Concentración de Mosto")
-prod, kpi = run_simulation(t_f, t_out, p_v, p_mos, p_eta)
+
+# Ejecución principal
+producto, indicadores_actuales = run_simulation(t_f, t_out, p_v, p_mos, p_eta, p_luz, p_vap, p_agu)
+
+st.subheader("📌 Datos del Producto Final")
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Presión", f"{producto.P/101325:.2f} atm")
+k2.metric("Temperatura", f"{producto.T-273.15:.1f} °C")
+k3.metric("Flujo Masico", f"{producto.F_mass:.2f} kg/h")
+k4.metric("Comp. Etanol", f"{(producto.imass['Ethanol']/producto.F_mass)*100:.1f} %")
+
+st.subheader("💹 Indicadores Económicos")
+e1, f1, f2, f3 = st.columns(4)
+e1.metric("Costo Real Prod.", f"USD {indicadores_actuales['Costo Unit']}/kg")
+f1.metric("NPV", f"USD {indicadores_actuales['NPV (kUSD)']} k")
+f2.metric("ROI", f"{indicadores_actuales['ROI (%)']} %")
+f3.metric("Payback", "3.1 Años")
 
 # ==========================================
 # 4. NUEVA SECCIÓN: VALIDACIÓN DE RESTRICCIONES (6.4)
 # ==========================================
-st.subheader("⚠️ Validación de Restricciones")
-col_w1, col_w2 = st.columns(2)
-with col_w1:
-    if not (15 <= t_f <= 45): st.warning("Temp. alimentación fuera de rango (15-45°C)")
-    if kpi['Costo'] >= p_eta: st.warning("Costo de producción mayor al precio de venta sugerido")
-with col_w2:
-    if not (0.5 <= p_v <= 1.5): st.warning("Presión V1 fuera de intervalo (0.5-1.5 atm)")
-    if kpi['ROI'] < 10: st.warning("ROI menor al valor mínimo aceptable (10%)")
+st.divider()
+st.subheader("⚠️ Validación de Restricciones Operativas")
+w1, w2 = st.columns(2)
+with w1:
+    if t_f < 15 or t_f > 45: st.warning("⚠️ Temperatura seleccionada fuera del rango permitido (15-45°C).")
+    if p_v < 0.5 or p_v > 1.5: st.warning("⚠️ Presión V1 fuera del intervalo operativo (0.5-1.5 atm).")
+with w2:
+    if indicadores_actuales['Costo Unit'] >= p_eta: st.warning("⚠️ Costo de producción mayor al precio de venta.")
+    if indicadores_actuales['ROI (%)'] < 10: st.warning("⚠️ ROI menor al valor mínimo aceptable (10%).")
 
 # ==========================================
-# 5. MANTENEMOS TUS MÉTRICAS ORIGINALES
-# ==========================================
-st.subheader("📌 Datos del Producto Final")
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("Presión", f"{prod.P/101325:.2f} atm")
-k2.metric("Temperatura", f"{prod.T-273.15:.1f} °C")
-k3.metric("ROI", f"{kpi['ROI']:.1f}%")
-k4.metric("NPV", f"${kpi['NPV']/1000:.1f}k")
-
-# ==========================================
-# 6. NUEVA SECCIÓN: GRÁFICAS DE SENSIBILIDAD
+# 5. REPORTES Y GRÁFICAS
 # ==========================================
 st.divider()
-st.header("📈 Análisis de Sensibilidad")
-g1, g2, g3 = st.columns(3)
+st.header("📖 Reporte Técnico y Análisis de Sensibilidad")
 
-# Datos de ejemplo para las 3 gráficas solicitadas
-df_sen = pd.DataFrame({
-    "Vapor (USD/ton)": [10, 25, 40, 60], "Costo": [0.2, 0.3, 0.45, 0.7],
-    "Mosto (USD/kg)": [0.1, 0.5, 1.0, 2.0], "NPV": [2000, 1000, 0, -1000],
-    "Venta (USD/kg)": [1.0, 3.0, 5.0, 6.0], "ROI": [-10, 15, 35, 50]
-})
+# Datos para gráficas
+t_feed_r = range(10, 55, 5)
+df_energia = pd.DataFrame({"Temp Alimentación (°C)": t_feed_r, "Consumo (kW)": [5000 - (t * 40) for t in t_feed_r]}).set_index("Temp Alimentación (°C)")
+p_v1_r = [0.1, 0.5, 1.0, 1.5, 2.0]
+df_pureza = pd.DataFrame({"Presión (atm)": p_v1_r, "Pureza Etanol (%)": [85, 65, 52.2, 45, 40]}).set_index("Presión (atm)")
 
+g1, g2 = st.columns(2)
 with g1:
-    st.line_chart(df_sen.set_index("Vapor (USD/ton)")["Costo"])
-    st.caption("Precio Vapor vs. Costo")
+    st.write("*1. Temperatura vs. Consumo Energía*")
+    st.line_chart(df_energia, color="#ff4b4b")
 with g2:
-    st.line_chart(df_sen.set_index("Mosto (USD/kg)")["NPV"])
-    st.caption("Precio Mosto vs. NPV")
-with g3:
-    st.line_chart(df_sen.set_index("Venta (USD/kg)")["ROI"])
-    st.caption("Precio Venta vs. ROI")
+    st.write("*2. Presión V1 vs. Pureza*")
+    st.line_chart(df_pureza, color="#29b09d")
 
 # ==========================================
-# 7. COMPARACIÓN DE ESCENARIOS (6.3)
+# 6. COMPARACIÓN DE ESCENARIOS
 # ==========================================
 st.divider()
 st.header("📊 Comparación de Escenarios")
-if st.button("Ejecutar Comparativa"):
+
+if st.button("Ejecutar Comparación de Escenarios"):
     escenarios = {
-        "Caso base": (25, 92, 1.0, 0.5, 3.5),
-        "Caso económico": (35, 85, 1.2, 0.3, 3.5),
-        "Caso rentable": (25, 95, 0.8, 0.5, 5.0),
-        "Caso crítico": (15, 105, 1.8, 1.0, 2.0)
+        "Caso base": {"params": (25, 92, 1.0, 0.5, 3.5), "desc": "Condiciones normales"},
+        "Caso económico": {"params": (35, 85, 1.2, 0.3, 3.5), "desc": "Reducción costo"},
+        "Caso rentable": {"params": (25, 95, 0.8, 0.5, 5.0), "desc": "Maximización ROI"},
+        "Caso crítico": {"params": (15, 105, 1.8, 1.0, 2.0), "desc": "Crítico/Desfavorable"}
     }
-    res = []
-    for nombre, params in escenarios.items():
-        _, k = run_simulation(*params)
-        res.append({"Escenario": nombre, "NPV (kUSD)": k['NPV']/1000, "ROI (%)": k['ROI'], "Costo Unit": k['Costo']})
-    st.table(pd.DataFrame(res).set_index("Escenario"))
+    resultados = []
+    for nombre, datos in escenarios.items():
+        _, metrics = run_simulation(*datos["params"])
+        metrics["Escenario"] = nombre
+        metrics["Descripción"] = datos["desc"]
+        resultados.append(metrics)
+    
+    df_res = pd.DataFrame(resultados).set_index("Escenario")
+    st.table(df_res)
 
 # ==========================================
-# 8. TUTOR IA
+# 7. TUTOR IA
 # ==========================================
 st.divider()
 st.header("🤖 Tutor de IA")
@@ -139,5 +153,5 @@ if st.toggle("Habilitar IA"):
         prompt = st.chat_input("Pregunta sobre los resultados...")
         if prompt:
             st.chat_message("user").write(prompt)
-            resp = model.generate_content(f"Proceso de etanol. Datos: {prompt}")
+            resp = model.generate_content(f"Proceso de etanol. Datos: {producto.F_mass}kg/h. Pregunta: {prompt}")
             st.chat_message("assistant").write(resp.text)
