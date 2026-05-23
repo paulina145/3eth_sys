@@ -126,30 +126,38 @@ with g2:
 # ==========================================
 # 5. COMPARACIÓN DE ESCENARIOS
 # ==========================================
-st.divider()
+import streamlit as st
+import biosteam as bst
+import pandas as pd
+
+# ... (mantén tus importaciones de biosteam, thermosteam, etc.)
+
+def run_simulation_fixed(t_feed, t_w220, p_v1, p_mos, p_eta):
+    # Función simplificada para escenarios sin sliders dinámicos
+    bst.main_flowsheet.clear()
+    # ... (tu configuración de bst.Stream, bst.Pump, etc. igual que siempre)
+    # Debes retornar un diccionario con los indicadores: NPV, ROI, Costo, etc.
+    return {"NPV": ..., "ROI": ..., "Costo": ...}
+
+# --- NUEVA SECCIÓN DE ESCENARIOS ---
 st.header("📊 Comparación de Escenarios")
-st.markdown("La aplicación permite comparar distintos escenarios de operación. Se utiliza la siguiente estructura:")
 
-# Creación de la tabla basada en la imagen proporcionada
-escenarios_data = {
-    "Escenario": ["Caso base", "Caso económico", "Caso rentable", "Caso crítico"],
-    "Descripción": [
-        "Condiciones normales de operación establecidas por el equipo.",
-        "Condiciones que buscan reducir el costo real de producción.",
-        "Condiciones que buscan mejorar NPV, Payback y ROI.",
-        "Condiciones desfavorables de operación o precios."
-    ],
-    "Resultados esperados": [
-        "Sirve como punto de comparación.",
-        "Menor costo por unidad de producto.",
-        "Mayor rentabilidad del proceso.",
-        "Identificación de riesgos económicos u operativos."
-    ]
-}
-
-df_escenarios = pd.DataFrame(escenarios_data)
-# st.table muestra el dataframe con un formato de tabla limpio de HTML/CSS nativo de Streamlit
-st.table(df_escenarios)
+if st.button("Ejecutar Comparación de Escenarios"):
+    escenarios = {
+        "Caso base": (25, 92, 1.0, 0.5, 3.5),
+        "Caso económico": (35, 85, 1.2, 0.3, 3.5), # Ejemplo: mosto más barato
+        "Caso rentable": (25, 95, 0.8, 0.5, 5.0),  # Ejemplo: precio venta más alto
+        "Caso crítico": (15, 105, 1.8, 1.0, 2.0)    # Ejemplo: insumos caros
+    }
+    
+    resultados = []
+    for nombre, params in escenarios.items():
+        res = run_simulation_fixed(*params)
+        res["Escenario"] = nombre
+        resultados.append(res)
+    
+    df_res = pd.DataFrame(resultados).set_index("Escenario")
+    st.table(df_res)
 
 # ==========================================
 # 6. DOCUMENTACIÓN Y TUTOR IA
