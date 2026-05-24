@@ -85,7 +85,7 @@ f2.metric("ROI", f"{indicadores_actuales['ROI (%)']} %")
 f3.metric("Payback", "3.1 Años")
 
 # ==========================================
-# 4. NUEVA SECCIÓN: VALIDACIÓN DE RESTRICCIONES (6.4)
+# 4. NUEVA SECCIÓN: VALIDACIÓN DE RESTRICCIONES 
 # ==========================================
 st.divider()
 st.subheader("⚠️ Validación de Restricciones Operativas")
@@ -184,8 +184,19 @@ c4, c5, c6 = st.columns(3)
 c4.metric("Conc. Final Mosto", f"{(producto.imass['Ethanol']/producto.F_mass)*100:.1f} %")
 c5.metric("Recup. Etanol", f"{recuperacion:.1f} %")
 c6.metric("Costo Energético", f"USD {costo_energetico:.2f}/kg")
+#==========================================
+# 7. DOCUMENTACIÓN
+st.divider()
+d1, d2 = st.columns(2)
+with d1: 
+    if os.path.exists("Bloques_ISO.pdf"): 
+        with open("Bloques_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar Bloques", f, "Bloques_ISO.pdf")
+with d2:
+    if os.path.exists("PFD_ISO.pdf"): 
+        with open("PFD_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar PFD", f, "PFD_ISO.pdf")
+#==========================================
 # ==========================================
-# 7. TUTOR IA
+# 8. TUTOR IA
 # ==========================================
 st.divider()
 st.header("🤖 Tutor de IA")
