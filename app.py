@@ -187,13 +187,17 @@ c6.metric("Costo Energético", f"USD {costo_energetico:.2f}/kg")
 #==========================================
 # 7. DOCUMENTACIÓN
 st.divider()
-d1, d2 = st.columns(2)
+d1, d2, d3 = st.columns(3)
 with d1: 
     if os.path.exists("Bloques_ISO.pdf"): 
         with open("Bloques_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar Bloques", f, "Bloques_ISO.pdf")
 with d2:
     if os.path.exists("PFD_ISO.pdf"): 
         with open("PFD_ISO.pdf", "rb") as f: st.download_button("⬇️ Descargar PFD", f, "PFD_ISO.pdf")
+
+with d3:
+    if os.path.exists("tablas de balance.xlsx"): 
+        with open("tablas de balance.xlsx", "rb") as f: st.download_button("⬇️ Descargar tablas de balance", f, "Tablas de balance.xlsx")
 #==========================================
 # ==========================================
 # 8. TUTOR IA
