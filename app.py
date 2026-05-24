@@ -186,6 +186,7 @@ c5.metric("Recup. Etanol", f"{recuperacion:.1f} %")
 c6.metric("Costo Energético", f"USD {costo_energetico:.2f}/kg")
 #==========================================
 # 7. DOCUMENTACIÓN
+#==========================================
 st.divider()
 d1, d2, d3 = st.columns(3)
 with d1: 
@@ -198,19 +199,45 @@ with d2:
 with d3:
     if os.path.exists("tablas de balance.xlsx"): 
         with open("tablas de balance.xlsx", "rb") as f: st.download_button("⬇️ Descargar tablas de balance", f, "Tablas de balance.xlsx")
-#==========================================
+
 # ==========================================
-# 8. TUTOR IA
+# 8. INTEGRACIÓN CON IA (GEMINI)
 # ==========================================
-st.divider()
-st.header("🤖 Tutor de IA")
-if st.toggle("Habilitar IA"):
-    key = st.text_input("Gemini API Key", type="password")
-    if key:
-        genai.configure(api_key=key)
+st.header("🤖 Tutor con IA (Gemini)")
+st.info("El modo tutor está orientado a la explicación técnica de los resultados. Utiliza los datos generados por la simulación.")
+
+if st.toggle("Habilitar Modo Tutor"):
+    api_key = st.text_input("Ingrese su API Key de Gemini:", type="password")
+    
+    if api_key:
+        genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = st.chat_input("Pregunta sobre los resultados...")
-        if prompt:
+        
+        # Prompt base exigido en las especificaciones
+        system_prompt = f"""
+        Actúa como un tutor experto en simulación de procesos, balances de materia y energía, diseño de plantas y análisis económico. 
+        Explica los resultados de forma clara para estudiantes de ingeniería química. 
+        Utiliza únicamente los valores calculados o mostrados por la aplicación:
+        - Flujo producto: {prod_mass:.2f} kg/h
+        - Pureza etanol: {pureza_final:.1f}%
+        - Costo de producción: ${costo_prod:.2f}/kg
+        - NPV: ${npv/1e6:.2f}M, ROI: {roi:.1f}%
+        No inventes datos. Si falta información, indícalo de forma explícita y sugiere qué dato sería necesario para mejorar el análisis.
+        """
+        
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
+        for msg in st.session_state.messages:
+            st.chat_message(msg["role"]).write(msg["content"])
+
+        if prompt := st.chat_input("Escribe tu pregunta sobre la simulación..."):
+            st.session_state.messages.append({"role": "user", "content": prompt})
             st.chat_message("user").write(prompt)
-            resp = model.generate_content(f"Proceso de etanol. Datos: {producto.F_mass}kg/h. Pregunta: {prompt}")
-            st.chat_message("assistant").write(resp.text)
+            
+            # Generación de respuesta con contexto
+            full_prompt = f"{system_prompt}\n\nPregunta del usuario: {prompt}"
+            response = model.generate_content(full_prompt)
+            
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
+            st.chat_message("assistant").write(response.text)
