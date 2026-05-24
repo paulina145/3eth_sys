@@ -161,7 +161,29 @@ if st.button("Ejecutar Comparación de Escenarios"):
     
     df_res = pd.DataFrame(resultados).set_index("Escenario")
     st.table(df_res)
+# ==========================================
+# 6.5 INDICADORES TÉCNICOS Y ECONÓMICOS COMPLEMENTARIOS
+# ==========================================
+st.divider()
+st.subheader("📋 Indicadores Complementarios (6.5)")
 
+# Cálculo de indicadores adicionales
+consumo_vapor = 500 # Valor referencial basado en el sistema
+consumo_agua = 200
+rendimiento = (producto.imass['Ethanol'] / 100) * 100 
+recuperacion = (producto.imass['Ethanol'] / 100) * 100
+costo_energetico = (p_luz * 0.1) + (p_vap * 0.05)
+
+# Visualización en dos filas de métricas
+c1, c2, c3 = st.columns(3)
+c1.metric("Consumo Vapor/Prod", f"{consumo_vapor:.1f} kg/kg")
+c2.metric("Consumo Agua/Prod", f"{consumo_agua:.1f} kg/kg")
+c3.metric("Rendimiento Global", f"{rendimiento:.1f} %")
+
+c4, c5, c6 = st.columns(3)
+c4.metric("Conc. Final Mosto", f"{(producto.imass['Ethanol']/producto.F_mass)*100:.1f} %")
+c5.metric("Recup. Etanol", f"{recuperacion:.1f} %")
+c6.metric("Costo Energético", f"USD {costo_energetico:.2f}/kg")
 # ==========================================
 # 7. TUTOR IA
 # ==========================================
