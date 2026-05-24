@@ -165,7 +165,7 @@ if st.button("Ejecutar Comparación de Escenarios"):
 # 6.5 INDICADORES TÉCNICOS Y ECONÓMICOS COMPLEMENTARIOS
 # ==========================================
 st.divider()
-st.subheader("📋 Indicadores Complementarios (6.5)")
+st.subheader("📋 Indicadores Complementarios")
 
 # Cálculo de indicadores adicionales
 consumo_vapor = 500 # Valor referencial basado en el sistema
