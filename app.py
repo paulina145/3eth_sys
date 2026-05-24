@@ -103,20 +103,42 @@ with w2:
 st.divider()
 st.header("📖 Reporte Técnico y Análisis de Sensibilidad")
 
-# Datos para gráficas
+# --- Datos para gráficas originales ---
 t_feed_r = range(10, 55, 5)
 df_energia = pd.DataFrame({"Temp Alimentación (°C)": t_feed_r, "Consumo (kW)": [5000 - (t * 40) for t in t_feed_r]}).set_index("Temp Alimentación (°C)")
 p_v1_r = [0.1, 0.5, 1.0, 1.5, 2.0]
 df_pureza = pd.DataFrame({"Presión (atm)": p_v1_r, "Pureza Etanol (%)": [85, 65, 52.2, 45, 40]}).set_index("Presión (atm)")
 
+# --- Nuevos datos de sensibilidad ---
+# Sensibilidad: Precio Mosto vs NPV
+precios_mosto = [0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5]
+resultados_npv = []
+for p in precios_mosto:
+    _, mets = run_simulation(t_f, t_out, p_v, p, p_eta, p_luz, p_vap, p_agu)
+    resultados_npv.append(mets['NPV (kUSD)'])
+df_npv = pd.DataFrame({"Precio Mosto (USD/kg)": precios_mosto, "NPV (kUSD)": resultados_npv}).set_index("Precio Mosto (USD/kg)")
+
+# Sensibilidad: Precio Venta vs ROI
+precios_venta = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5]
+resultados_roi = []
+for p in precios_venta:
+    _, mets = run_simulation(t_f, t_out, p_v, p_mos, p, p_luz, p_vap, p_agu)
+    resultados_roi.append(mets['ROI (%)'])
+df_roi = pd.DataFrame({"Precio Venta (USD/kg)": precios_venta, "ROI (%)": resultados_roi}).set_index("Precio Venta (USD/kg)")
+
+# --- Visualización ---
 g1, g2 = st.columns(2)
 with g1:
     st.write("*1. Temperatura vs. Consumo Energía*")
     st.line_chart(df_energia, color="#ff4b4b")
+    st.write("*3. Precio Mosto vs. NPV*")
+    st.line_chart(df_npv, color="#6c5ce7")
+
 with g2:
     st.write("*2. Presión V1 vs. Pureza*")
     st.line_chart(df_pureza, color="#29b09d")
-
+    st.write("*4. Precio Venta vs. ROI*")
+    st.line_chart(df_roi, color="#f39c12")
 # ==========================================
 # 6. COMPARACIÓN DE ESCENARIOS
 # ==========================================
